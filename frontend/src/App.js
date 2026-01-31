@@ -1,0 +1,181 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import './App.css';
+
+function App() {
+  const [data, setData] = useState({ periods: [], rows: [] });
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('/api/table/');
+      setData(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Ошибка загрузки:', error);
+    }
+  };
+
+  const initTable = async () => {
+    try {
+      await axios.post('/api/table/init');
+      fetchData();
+    } catch (error) {
+      console.error('Ошибка инициализации:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const updateCell = async (rowId, periodId, value) => {
+    try {
+      const numValue = value === '' ? null : parseFloat(value);
+      await axios.put(`/api/table/cells/${rowId}/${periodId}?value=${numValue}`);
+      fetchData();
+    } catch (error) {
+      console.error('Ошибка обновления ячейки:', error);
+    }
+  };
+
+  const updateRowField = async (rowId, field, value) => {
+    try {
+      await axios.put(`/api/table/rows/${rowId}?${field}=${encodeURIComponent(value)}`);
+      fetchData();
+    } catch (error) {
+      console.error('Ошибка обновления поля:', error);
+    }
+  };
+
+  const addRow = async () => {
+    try {
+      await axios.post('/api/table/rows', {
+        entity: 'Новое юрлицо',
+        article: 'Новая статья',
+        project: 'Новый проект'
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Ошибка добавления строки:', error);
+    }
+  };
+
+  const addChildRow = async (parentId) => {
+    try {
+      await axios.post('/api/table/rows', {
+        parent_id: parentId,
+        project: 'Подстрока'
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Ошибка добавления подстроки:', error);
+    }
+  };
+
+  const deleteRow = async (rowId) => {
+    try {
+      await axios.delete(`/api/table/rows/${rowId}`);
+      fetchData();
+    } catch (error) {
+      console.error('Ошибка удаления строки:', error);
+    }
+  };
+
+  const addPeriod = async () => {
+    try {
+      await axios.post('/api/table/periods');
+      fetchData();
+    } catch (error) {
+      console.error('Ошибка добавления периода:', error);
+    }
+  };
+
+  const deletePeriod = async (periodId) => {
+    try {
+      await axios.delete(`/api/table/periods/${periodId}`);
+      fetchData();
+    } catch (error) {
+      console.error('Ошибка удаления периода:', error);
+    }
+  };
+
+  const renderRow = (row) => {
+    const indent = row.level * 20;
+    
+    return (
+      <React.Fragment key={row.id}>
+        <tr className={`level-${row.level}`}>
+          <td className="actions-cell">
+            <div className="row-controls">
+              <button className="icon-btn add-child" onClick={() => addChildRow(row.id)} title="Добавить подстроку">+</button>
+              <button className="icon-btn delete" onClick={() => deleteRow(row.id)} title="Удалить">×</button>
+            </div>
+          </td>
+          <td className="fixed-col">
+            <input type="text" value={row.entity} onChange={(e) => updateRowField(row.id, 'entity', e.target.value)} style={{ paddingLeft: `${indent + 8}px` }} placeholder="Юр. лицо" />
+          </td>
+          <td className="fixed-col">
+            <input type="text" value={row.article} onChange={(e) => updateRowField(row.id, 'article', e.target.value)} placeholder="Статья" />
+          </td>
+          <td className="fixed-col">
+            <input type="text" value={row.project} onChange={(e) => updateRowField(row.id, 'project', e.target.value)} placeholder="Проект" />
+          </td>
+          {data.periods.map(period => {
+            const cell = row.cells.find(c => c.period_id === period.id);
+            return (
+              <td key={period.id} className="period-cell">
+                <input type="number" step="any" value={cell?.value ?? ''} onChange={(e) => updateCell(row.id, period.id, e.target.value)} placeholder="—" />
+              </td>
+            );
+          })}
+        </tr>
+        {row.children && row.children.map(child => renderRow(child))}
+      </React.Fragment>
+    );
+  };
+
+  if (loading) return <div className="loading">Загрузка...</div>;
+
+  return (
+    <div className="App">
+      <h1>Бюджетная таблица (1С интеграция)</h1>
+      <div className="toolbar">
+        <button onClick={addRow} className="btn-primary">+ Добавить строку</button>
+        <button onClick={addPeriod} className="btn-primary">+ Добавить период</button>
+        <button onClick={initTable} className="btn-secondary">↻ Инициализировать пример</button>
+      </div>
+      <div className="table-wrapper">
+        <table className="budget-table">
+          <thead>
+            <tr>
+              <th className="actions-header"></th>
+              <th className="fixed-header">Юр. лицо</th>
+              <th className="fixed-header">Статья</th>
+              <th className="fixed-header">Проект</th>
+              {data.periods.map(period => (
+                <th key={period.id} className="period-header">
+                  {period.name}
+                  <span className="delete-period" onClick={() => deletePeriod(period.id)} title="Удалить период">×</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map(row => renderRow(row))}
+          </tbody>
+        </table>
+      </div>
+      <div className="charts-section">
+        <h2>Графики и аналитика</h2>
+        <p>Визуализация данных бюджета (заглушка для интеграции с 1С)</p>
+        <div className="chart-placeholder">
+          <div className="chart-icon">📊</div>
+          <div className="chart-text">Здесь будут отображаться графики по периодам</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
