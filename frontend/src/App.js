@@ -13,6 +13,7 @@ function App() {
       setLoading(false);
     } catch (error) {
       console.error('Ошибка загрузки:', error);
+      setLoading(false);
     }
   };
 
@@ -22,6 +23,7 @@ function App() {
       fetchData();
     } catch (error) {
       console.error('Ошибка инициализации:', error);
+      alert('Ошибка: ' + error.message);
     }
   };
 
@@ -84,7 +86,8 @@ function App() {
 
   const addPeriod = async () => {
     try {
-      await axios.post('/api/table/periods');
+      const periodNum = data.periods.length + 1;
+      await axios.post(`/api/table/periods?name=${encodeURIComponent('Период ' + periodNum)}`);
       fetchData();
     } catch (error) {
       console.error('Ошибка добавления периода:', error);
@@ -158,7 +161,8 @@ function App() {
                   step="any"
                   value={cell?.value ?? ''}
                   onChange={(e) => updateCell(row.id, period.id, e.target.value)}
-                  placeholder="—"
+                  placeholder=""
+                  className="no-spinners"
                 />
               </td>
             );
@@ -181,9 +185,8 @@ function App() {
       <header className="app-header">
         <div className="logo">
           <div className="logo-icon">◆</div>
-          <h1>Budget Pro</h1>
+          <h1>IXC Budget</h1>
         </div>
-        <p className="subtitle">Система управления бюджетом</p>
       </header>
 
       <main className="main-content">
@@ -204,7 +207,6 @@ function App() {
         <div className="table-card">
           <div className="table-header">
             <h2>Бюджетная таблица</h2>
-            <span className="badge">{data.rows.length} строк</span>
           </div>
           
           <div className="table-wrapper">
