@@ -1,9 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import os
 
 from app.database import engine, Base
 from app.routers import table
+
+# Разрешенные origins (Vercel + локальная разработка)
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://localhost:3000",
+    # Добавим домен Vercel после деплоя
+    os.getenv("FRONTEND_URL", ""),
+]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,7 +26,7 @@ app = FastAPI(title="Superset-1C Bridge API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=[url for url in ALLOWED_ORIGINS if url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
